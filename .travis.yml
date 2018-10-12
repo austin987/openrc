@@ -1,0 +1,8 @@
+# Travis build integration.
+# https://docs.travis-ci.com/
+
+language: c
+os:
+  - linux
+script:
+  - ./test/travis.sh
