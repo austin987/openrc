@@ -23,4 +23,7 @@ else
 fi
 
 make -j"${cpus}"
+
+# This make whitespace/etc. checks fatal
+export FATAL_CHECKS=1
 make test
