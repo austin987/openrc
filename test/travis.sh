@@ -16,8 +16,7 @@ set -x
 # These are steps to run on TravisCI under a containerized Ubuntu system.
 # See $TOP/.travis.yml for more info about the TravisCI setup.
 
-cpus=$(getconf _NPROCESSORS_CONF || echo 1)
-# make on TravisCI doesn't support -O yet
-make -j"${cpus}"
+# for debugging
+make -j1 -k
 
 make test
