@@ -21,3 +21,6 @@ cpus=$(getconf _NPROCESSORS_CONF || echo 1)
 make -j"${cpus}"
 
 make test
+
+# Runs shellcheck/bashism for anything with a shell shebang:
+./test/shell-checks

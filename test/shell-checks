@@ -1,0 +1,79 @@
+#!/bin/sh
+# Wrapper around checkbashisms/shellcheck
+#
+# Copyright (C) 2018 Austin English
+
+set -e
+set -x
+
+temp="$(mktemp -d)"
+
+trap 'rm -fr "$temp"' EXIT
+
+w_die() {
+    echo "$* failed"
+    exit 1
+}
+
+w_try() {
+    "$@"
+    status=$?
+    if test $status -ne 0; then
+        w_die "Note: command $* returned status $status.  Aborting."
+    fi
+}
+
+checkbashisms="$(command -v checkbashisms)"
+shellcheck="$(command -v shellcheck)"
+
+"$checkbashisms" --help > /dev/null || w_die "checkbashisms must be installed!"
+"$shellcheck" --version > /dev/null || w_die "shellcheck must be installed!"
+
+if [ ! -f Makefile ] ; then
+    w_die "$0 should be run from the top of the source tree"
+fi
+
+# Different versions can give different results:
+
+echo "======================== Begin checkbashisms version info ==========================="
+"$checkbashisms" --version
+echo "======================== End checkbashisms version info ==========================="
+
+echo "======================== Begin shellcheck version info ==========================="
+"$shellcheck" --version
+echo "======================== End shellcheck version info ==========================="
+
+# Check if checkbashisms supports `command -v`. If not, warn, or if on travis, patch it:
+cat > "${temp}/test.sh" <<_EOF
+#!/bin/sh
+command -v grep
+_EOF
+
+if ! "$checkbashisms" --posix "${temp}/test.sh"; then
+    echo "Use a sed expression, to add checkbashisms support for 'command -v', based on the patch from https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=733511"
+    echo "Creating a copy of the checkbashisms script, in ${temp}, to workaround this issue"
+    # /usr/bin/ (or /usr/local/bin on OSX) isn't writable on Travis, so we have to patch it in /tmp and use that:
+    (
+        sed -e '/qr'\''command\\s+\-\[\^p\]\\s'\''/ { ' -e 's|\[\^p\]|[^pvV]|' -e 's| \-p>| -p/-v/-V>|' -e '}' "$checkbashisms" > "${temp}/checkbashisms.patched" && \
+        chmod +x "${temp}/checkbashisms.patched"
+    )
+    checkbashisms="${temp}/checkbashisms.patched"
+fi
+
+# Use git ls-files if available, this prevents 'finding' scripts that aren't checked into git.
+# E.g., if patching foo fails, then foo.orig would also be 'found'.
+# The find fallback is for non git users, e.g., distros packaging OpenRC or end users
+# running shell-checks from a tarball download.
+if [ -d .git ] ; then
+    files_to_check="$(git ls-files | xargs file | grep -e 'POSIX shell script' | cut -d : -f1)"
+else
+    files_to_check="$(find . -type f -exec file {} \; | grep -e 'POSIX shell script' | cut -d : -f1)"
+fi
+
+for shellscript in $files_to_check; do
+    echo "Checking ${shellscript} for bashisms:"
+    w_try "$checkbashisms" --posix "${shellscript}"
+
+    echo "Checking ${shellscript} with shellcheck:"
+    w_try "$shellcheck" -s sh -x "${shellscript}"
+done

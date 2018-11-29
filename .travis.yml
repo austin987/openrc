@@ -10,5 +10,10 @@ compiler:
   - gcc
   - clang
 
+addons:
+  apt:
+    packages:
+    - devscripts
+
 script:
   - ./test/travis.sh
