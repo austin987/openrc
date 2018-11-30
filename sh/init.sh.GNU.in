@@ -15,14 +15,15 @@ if [ ! -d /run ]; then
     eend $?
 fi
 
-if [ -L $RC_SVCDIR ]; then
-    rm $RC_SVCDIR
+if [ -L "$RC_SVCDIR" ]; then
+    rm "$RC_SVCDIR"
 fi
 
 if ! mountinfo -q /run; then
     ebegin "Mounting /run"
     if ! fstabinfo --mount /run; then
         mount -t tmpfs -o mode=0755,no-suid,size=10% tmpfs /run
+        # shellcheck disable=SC2181
         if [ $? != 0 ]; then
             eerror "Unable to mount tmpfs on /run."
             eerror "Can't continue."
@@ -33,7 +34,7 @@ if ! mountinfo -q /run; then
 fi
 
 ebegin "Creating $RC_SVCDIR"
-mkdir -p $RC_SVCDIR
+mkdir -p "$RC_SVCDIR"
 eend $?
 
 if [ -e "$RC_LIBEXECDIR"/cache/softlevel ]; then

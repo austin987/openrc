@@ -16,12 +16,13 @@ TMPDIR=tmp-"$(basename "$0")"
 #   EXAMPLE: if is_older_than a.out *.o ; then ...
 ref_is_older_than()
 {
-	local x= ref="$1"
+	ref="$1"
 	shift
 
 	for x; do
-		[ "${x}" -nt "${ref}" ] && return 0
-		if [ -d "${x}" ]; then
+		if [ -n "$(find -L "${x}" -prune -newer "${ref}")" ]; then
+			return 0
+		elif [ -d "${x}" ]; then
 			ref_is_older_than "${ref}" "${x}"/* && return 0
 		fi
 	done
@@ -30,8 +31,6 @@ ref_is_older_than()
 
 do_test()
 {
-	local r1= r2=
-
 	ref_is_older_than "$@"
 	r1=$?
 	is_older_than "$@"

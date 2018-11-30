@@ -12,25 +12,37 @@
 # This file may not be copied, modified, propagated, or distributed
 #    except according to the terms contained in the LICENSE file.
 
-if [ -f /proc/acpi/ac_adapter/*/state ]; then
-	cat /proc/acpi/ac_adapter/*/state | while read line; do
-		case "$line" in
-		"state:"*"off-line") exit 128;;
-		esac
+if [ -f /proc/acpi/ac_adapter/ ]; then
+        if [ "$(find /proc/acpi/ac_adapter/ -maxdepth 1 -mindepth 1 -type d | wc -l)" -gt 1 ]; then
+                echo "WARNING: more than one ac adapter found!"
+        fi
+
+	for adapter in proc/acpi/ac_adapter/*/state; do
+                while read -r line; do
+                        case "$line" in
+			"state:"*"off-line") exit 128;;
+		        esac
+                done < "$adapter"
 	done
-elif [ -f /sys/class/power_supply/*/online ]; then
-	cat /sys/class/power_supply/*/online | while read line; do
-		[ "${line}" = 0 ] && exit 128
-	done
+elif [ -f /sys/class/power_supply/ ]; then
+        if [ "$(find  /sys/class/power_supply/ -maxdepth 1 -mindepth 1 -type d | wc -l)" -gt 1 ]; then
+                echo "WARNING: more than one power supply found!"
+        fi
+        for adapter in /sys/class/power_supply/*/online; do
+                while read -r line; do
+		        [ "${line}" = 0 ] && exit 128
+	        done
+        done
+
 elif [ -f /proc/pmu/info ]; then
-	cat /proc/pmu/info | while read line; do
+	while read -r line; do
 		case "$line" in
 		"AC Power"*": 0") exit 128;;
 		esac
-	done
+	done < /proc/pmu/info
 elif command -v envstat >/dev/null 2>&1; then
 	# NetBSD has envstat
-	envstat -d acpiacad0 2>/dev/null | while read line; do
+	envstat -d acpiacad0 2>/dev/null | while read -r line; do
 		case "$line" in
 		"connected:"*"OFF") exit 128;;
 		esac

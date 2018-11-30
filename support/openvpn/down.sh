@@ -9,6 +9,8 @@
 # This file may not be copied, modified, propagated, or distributed
 #    except according to the terms contained in the LICENSE file.
 
+dev="${dev:=/dev/null}"
+
 # If we have a service specific script, run this now
 [ -x "${RC_SVCNAME}"-down.sh ] && "${RC_SVCNAME}"-down.sh
 
@@ -16,7 +18,7 @@
 if command -v resolvconf >/dev/null 2>&1; then
 	resolvconf -d "${dev}"
 elif [ -e /etc/resolv.conf-"${dev}".sv ]; then
-	# Important that we copy instead of move incase resolv.conf is
+	# Important that we copy instead of move in case resolv.conf is
 	# a symlink and not an actual file
 	cp -p /etc/resolv.conf-"${dev}".sv /etc/resolv.conf
 	rm -f /etc/resolv.conf-"${dev}".sv

@@ -1,4 +1,5 @@
-#!@SHELL@
+#!/bin/bash
+# shellcheck disable=SC1090,SC1091
 # Shell wrapper to list our dependencies
 
 # Copyright (c) 2007-2015 The OpenRC Authors.
@@ -36,8 +37,8 @@ provide() {
 	[ -n "$*" ] && echo "$RC_SVCNAME iprovide $*" >&3
 }
 keyword() {
-	local c x
-	set -- $*
+	# shellcheck disable=SC2048,SC2086
+        set -- $*
 	while [ -n "$*" ]; do
 		case "$1" in
 			-containers) x="$(_get_containers)" ;;
@@ -68,12 +69,14 @@ do
 	unset _d
 	_done_dirs="$_done_dirs $_dir"
 
-	cd "$_dir"
+	cd "$_dir" || exit 2
 	for RC_SERVICE in *; do
-		[ -x "$RC_SERVICE" -a -f "$RC_SERVICE" ] || continue
+		if [ ! -x "$RC_SERVICE" ] || [ ! -f "$RC_SERVICE" ]; then
+			continue
+		fi
 
 		# Only generate dependencies for OpenRC scripts
-		read one two three <"$RC_SERVICE"
+		read -r one two <"$RC_SERVICE"
 		case "$one" in
 			\#*/openrc-run) ;;
 			\#*/runscript) ;;
@@ -102,7 +105,7 @@ do
 		exec 3>&1 1>&2
 
 		_rc_c=${RC_SVCNAME%%.*}
-		if [ -n "$_rc_c" -a "$_rc_c" != "$RC_SVCNAME" ]; then
+		if [ -n "$_rc_c" ] && [ "$_rc_c" != "$RC_SVCNAME" ]; then
 			if [ -e "$_dir/../conf.d/$_rc_c" ]; then
 				. "$_dir/../conf.d/$_rc_c"
 			fi

@@ -13,7 +13,7 @@
 
 verify_boot()
 {
-	if [ ! -e ${RC_SVCDIR}/softlevel ]; then
+	if [ ! -e "${RC_SVCDIR}/softlevel" ]; then
 		eerror "You are attempting to run an openrc service on a"
 		eerror "system which openrc did not boot."
 		eerror "You may be inside a chroot or you may have used"
@@ -33,6 +33,7 @@ sourcex()
 		shift
 		[ -e "$1" ] || return 1
 	fi
+	# shellcheck disable=SC1090
 	if ! . "$1"; then
 		eerror "$RC_SVCNAME: error loading $1"
 		exit 1
@@ -51,7 +52,7 @@ if sourcex -e "/sbin/livecd-functions.sh"; then
 	livecd_read_commandline
 fi
 
-if [ -z "$1" -o -z "$2" ]; then
+if [ -z "$1" ] || [ -z "$2" ]; then
 	eerror "$RC_SVCNAME: not enough arguments"
 	exit 1
 fi
@@ -86,7 +87,7 @@ provide() {
 	[ -n "$*" ] && echo "provide $*"
 }
 keyword() {
-	local c x
+	# shellcheck disable=SC2048,SC2086
 	set -- $*
 	while [ -n "$*" ]; do
 		case "$1" in
@@ -103,16 +104,17 @@ keyword() {
 # Describe the init script to the user
 describe()
 {
+	# shellcheck disable=SC2154
 	if [ -n "$description" ]; then
 		einfo "$description"
 	else
 		ewarn "No description for $RC_SVCNAME"
 	fi
 
-	local svc= desc=
+	# shellcheck disable=SC2154
 	for svc in ${extra_commands:-$opts} $extra_started_commands \
 		$extra_stopped_commands; do
-		eval desc=\$description_$svc
+		eval desc="\$description_$svc"
 		if [ -n "$desc" ]; then
 			einfo "$HILITE$svc$NORMAL: $desc"
 		else
@@ -149,7 +151,8 @@ _status()
 # supervisor modules
 default_start()
 {
-	local func=ssd_start
+	func=ssd_start
+	# shellcheck disable=SC2154
 	case "$supervisor" in
 		runit) func=runit_start ;;
 		s6) func=s6_start ;;
@@ -163,7 +166,7 @@ default_start()
 
 default_stop()
 {
-	local func=ssd_stop
+	func=ssd_stop
 	case "$supervisor" in
 		runit) func=runit_stop ;;
 		s6) func=s6_stop ;;
@@ -177,7 +180,7 @@ default_stop()
 
 default_status()
 {
-	local func=ssd_status
+	func=ssd_status
 	case "$supervisor" in
 		runit) func=runit_status ;;
 		s6) func=s6_status ;;
@@ -209,7 +212,7 @@ status()
 }
 
 # Start debug output
-yesno $RC_DEBUG && set -x
+yesno "$RC_DEBUG" && set -x
 
 # Load configuration settings. First the global ones, then any
 # service-specific settings.
@@ -223,7 +226,7 @@ fi
 _conf_d=${RC_SERVICE%/*}/../conf.d
 # If we're net.eth0 or openvpn.work then load net or openvpn config
 _c=${RC_SVCNAME%%.*}
-if [ -n "$_c" -a "$_c" != "$RC_SVCNAME" ]; then
+if [ -n "$_c" ] && [ "$_c" != "$RC_SVCNAME" ]; then
 	if ! sourcex -e "$_conf_d/$_c.$RC_RUNLEVEL"; then
 		sourcex -e "$_conf_d/$_c"
 	fi
@@ -252,16 +255,16 @@ if yesno "${rc_verbose:-$RC_VERBOSE}"; then
 fi
 
 for _cmd; do
-	if [ "$_cmd" != status -a "$_cmd" != describe ]; then
+	if [ "$_cmd" != status ] && [ "$_cmd" != describe ]; then
 		# Apply any ulimit defined
 		[ -n "${rc_ulimit:-$RC_ULIMIT}" ] && \
-			ulimit ${rc_ulimit:-$RC_ULIMIT}
+			ulimit "${rc_ulimit:-$RC_ULIMIT}"
 		# Apply cgroups settings if defined
 		if [ "$(command -v cgroup_add_service)" = "cgroup_add_service" ]
 		then
 			if grep -qs /sys/fs/cgroup /proc/1/mountinfo
 			then
-				if [ -d /sys/fs/cgroup -a ! -w /sys/fs/cgroup ]; then
+				if [ -d /sys/fs/cgroup ] && [ ! -w /sys/fs/cgroup ]; then
 					eerror "No permission to apply cgroup settings"
 					break
 				fi
@@ -277,21 +280,25 @@ for _cmd; do
 	fi
 done
 
-eval "printf '%s\n' $required_dirs" | while read _d; do
+# shellcheck disable=SC2154
+eval "printf '%s\\n' $required_dirs" | while read -r _d; do
 	if [ -n "$_d" ] && [ ! -d "$_d" ]; then
 		eerror "$RC_SVCNAME: \`$_d' is not a directory"
 		exit 1
 	fi
 done
+# shellcheck disable=SC2181
 [ $? -ne 0 ] && exit 1
 unset _d
 
-eval "printf '%s\n' $required_files" | while read _f; do
+# shellcheck disable=SC2154
+eval "printf '%s\\n' $required_files" | while read -r _f; do
 	if [ -n "$_f" ] && [ ! -r "$_f" ]; then
 		eerror "$RC_SVCNAME: \`$_f' is not readable"
 		exit 1
 	fi
 done
+# shellcheck disable=SC2181
 [ $? -ne 0 ] && exit 1
 unset _f
 
@@ -308,9 +315,9 @@ while [ -n "$1" ]; do
 
 		# Enter the dir of the init script to fix the globbing
 		# bug 412677
-		cd ${RC_SERVICE%/*}
+		cd "${RC_SERVICE%/*}" || exit 1
 		_depend
-		cd /
+		cd / || exit 1
 		continue
 	fi
 	# See if we have the required function and run it
@@ -325,9 +332,10 @@ while [ -n "$1" ]; do
 				# triggers other services to start which
 				# depend on us.
 				# A good example of this is openvpn.
-				if yesno $IN_BACKGROUND; then
-					for _cmd in $in_background_fake; do
-						if [ "$_cmd" = "$1" ]; then
+				if yesno "$IN_BACKGROUND"; then
+                                        # shellcheck disable=SC2154
+					for _i in $in_background_fake; do
+						if [ "$_i" = "$1" ]; then
 							shift
 							continue 3
 						fi
@@ -335,8 +343,8 @@ while [ -n "$1" ]; do
 				fi
 				# Check to see if we need to be started before
 				# we can run this command
-				for _cmd in $extra_started_commands; do
-					if [ "$_cmd" = "$1" ]; then
+				for _j in $extra_started_commands; do
+					if [ "$_j" = "$1" ]; then
 						if verify_boot && ! service_started; then
 							eerror "$RC_SVCNAME: cannot \`$1' as it has not been started"
 							exit 1
@@ -345,8 +353,8 @@ while [ -n "$1" ]; do
 				done
 				# Check to see if we need to be stopped before
 				# we can run this command
-				for _cmd in $extra_stopped_commands; do
-					if [ "$_cmd" = "$1" ]; then
+				for _k in $extra_stopped_commands; do
+					if [ "$_k" = "$1" ]; then
 						if verify_boot && ! service_stopped; then
 							eerror "$RC_SVCNAME: cannot \`$1' as it has not been stopped"
 							exit 1
@@ -366,18 +374,20 @@ while [ -n "$1" ]; do
 				then
 					"$1"_post || exit $?
 				fi
+				# shellcheck disable=SC2154
 				[ "$(command -v cgroup_cleanup)" = "cgroup_cleanup" ] &&
 					[ "$1" = "stop" ] &&
 					yesno "${rc_cgroup_cleanup}" && \
 					cgroup_cleanup
 				if [ "$(command -v cgroup2_remove)" = "cgroup2_remove" ]; then
+                                        # shellcheck disable=SC2154
 					[ "$1" = stop ] || [ -z "${command}" ] &&
 					cgroup2_remove
 				fi
 				shift
 				continue 2
 			else
-				if [ "$_cmd" = "start" -o "$_cmd" = "stop" ]
+				if [ "$_cmd" = "start" ] || [ "$_cmd" = "stop" ]
 				then
 					shift
 					continue 2

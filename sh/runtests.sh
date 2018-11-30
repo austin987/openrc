@@ -9,7 +9,8 @@
 # This file may not be copied, modified, propagated, or distributed
 #    except according to the terms contained in the LICENSE file.
 
-: ${top_srcdir:=..}
+: "${top_srcdir:=..}"
+# shellcheck disable=1090
 . $top_srcdir/test/setup_env.sh
 
 ret=0
@@ -29,6 +30,6 @@ for f in no NO No false FALSE False 0 ; do
 	fi
 done
 eend $tret
-: $(( ret += $tret ))
+: $(( ret += tret ))
 
 exit $ret

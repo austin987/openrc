@@ -28,28 +28,31 @@ mount_svcdir()
 	fi
 }
 
+# shellcheck disable=SC1090
 . "$RC_LIBEXECDIR"/sh/functions.sh
+# shellcheck disable=SC1091
 [ -r "@SYSCONFDIR@/rc.conf" ] && . "@SYSCONFDIR@/rc.conf"
 if [ -d "@SYSCONFDIR@/rc.conf.d" ]; then
 	for _f in "@SYSCONFDIR@"/rc.conf.d/*.conf; do
+                # shellcheck disable=SC1090
 		[ -r "$_f" ] && . "$_f"
 	done
 fi
 
 # Disable devd until we need it
-if [ -z "$RC_SYS" -a "$RC_UNAME" = "FreeBSD" ]; then
+if [ -z "$RC_SYS" ] && [ "$RC_UNAME" = "FreeBSD" ]; then
 	sysctl hw.bus.devctl_disable=1 >/dev/null
 fi
 
 # mount $RC_SVCDIR as something we can write to if it's not rw
 # On vservers, / is always rw at this point, so we need to clean out
 # the old service state data
-: ${RC_LIBEXECDIR:=@LIBEXECDIR@}
-: ${RC_SVCDIR:=@LIBEXECDIR@/init.d}
+: "${RC_LIBEXECDIR:=@LIBEXECDIR@}"
+: "${RC_SVCDIR:=@LIBEXECDIR@/init.d}"
 case "$(openrc --sys)" in
-	OPENVZ|VSERVER)	rm -rf "$RC_SVCDIR"/*;;
+	OPENVZ|VSERVER)	rm -rf "${RC_SVCDIR:?}"/*;;
 	*)		if mountinfo --quiet "$RC_SVCDIR"; then
-				rm -rf "$RC_SVCDIR"/*
+				rm -rf "${RC_SVCDIR:?}"/*
 			else
 				mount_svcdir
 			fi

@@ -1,3 +1,4 @@
+#!/bin/sh
 # Allow any sh script to work with einfo functions and friends
 # We also provide a few helpful functions for other programs to use
 
@@ -11,7 +12,7 @@
 # This file may not be copied, modified, propagated, or distributed
 #    except according to the terms contained in the LICENSE file.
 
-RC_GOT_FUNCTIONS="yes"
+export RC_GOT_FUNCTIONS="yes"
 
 eindent()
 {
@@ -41,8 +42,9 @@ yesno()
 	# Check the value of the var so people can do:
 	# yesno VAR
 	# Note: this breaks when the var contains a double quote.
-	local value=
-	eval value=\"\$$1\"
+        # shellcheck disable=SC2086
+        eval value=\"\$$1\"
+	# shellcheck disable=SC2154
 	case "$value" in
 		[Yy][Ee][Ss]|[Tt][Rr][Uu][Ee]|[Oo][Nn]|1) return 0;;
 		[Nn][Oo]|[Ff][Aa][Ll][Ss][Ee]|[Oo][Ff][Ff]|0) return 1;;
@@ -57,7 +59,7 @@ rc_runlevel()
 
 _sanitize_path()
 {
-	local IFS=":" p= path=
+	IFS=":"
 	for p in $PATH; do
 		case "$p" in
 			@LIBEXECDIR@/bin|@LIBEXECDIR@/sbin);;
@@ -73,7 +75,10 @@ _sanitize_path()
 # Allow our scripts to support zsh
 if [ -n "$ZSH_VERSION" ]; then
 	emulate sh
-	NULLCMD=:
+	export NULLCMD=:
+        # FIXME: this deserves a closer look, but I don't use zsh:
+        # https://github.com/koalaman/shellcheck/wiki/SC2142
+        # shellcheck disable=SC2142
 	alias -g '${1+"$@"}'='"$@"'
 	setopt NO_GLOB_SUBST
 fi
@@ -110,6 +115,7 @@ done
 
 if [ -t 1 ] && yesno "${EINFO_COLOR:-YES}"; then
 	if [ -z "$GOOD" ]; then
+		# shellcheck disable=SC2046
 		eval $(eval_ecolors)
 	fi
 else
