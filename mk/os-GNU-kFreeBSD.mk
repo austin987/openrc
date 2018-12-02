@@ -13,5 +13,6 @@
 SFX=		.GNU-kFreeBSD.in
 PKG_PREFIX?=	/usr
 
+CPPFLAGS+=	-D_BSD_SOURCE
 LIBDL=		-Wl,-Bdynamic -ldl
 LIBKVM?=

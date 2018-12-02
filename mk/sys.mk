@@ -29,9 +29,6 @@ endif
 endif
 LOCAL_PREFIX=		$(UPREFIX)/local
 
-# For muslc
-CPPFLAGS=		-D_BSD_SOURCE -D_XOPEN_SOURCE
-
 PICFLAG?=		-fPIC
 
 SYSCONFDIR?=		${PREFIX}/etc
