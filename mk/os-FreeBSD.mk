@@ -11,5 +11,3 @@
 # Generic definitions
 
 include ${MK}/os-BSD.mk
-
-CPPFLAGS+=	-D_BSD_SOURCE
